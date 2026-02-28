@@ -2,6 +2,7 @@
 from fastapi_mcp import FastApiMCP, AuthConfig
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.security import APIKeyHeader
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Literal
 import requests
@@ -14,6 +15,15 @@ API_KEY = os.environ.get("API_KEY")
 api_key_header = APIKeyHeader(name="api_key", auto_error=False)
 
 app = FastAPI()
+
+# CORS — allow browsers to call this server directly
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Define a dependency to check the API
 async def get_api_key(
@@ -77,6 +87,35 @@ class TavilyResponse(BaseModel):
     results: list[Result] = []
 
 
+# ✅ PUBLIC endpoint — no API key needed, safe for browser/frontend to call directly
+# TAVILY_API_KEY stays hidden on the server
+@app.post("/search")
+async def public_search(request: TavilySearchRequest) -> TavilyResponse:
+    """Public web search — no auth required. For ZenoAI frontend."""
+    try:
+        params = {
+            "query": request.query,
+            "search_depth": request.search_depth,
+            "topic": request.topic,
+            "days": request.days,
+            "time_range": request.time_range,
+            "max_results": request.max_results,
+            "include_images": request.include_images,
+            "include_image_descriptions": request.include_image_descriptions,
+            "include_raw_content": request.include_raw_content,
+            "include_domains": request.include_domains,
+            "exclude_domains": request.exclude_domains
+        }
+        headers = {"Authorization": f"Bearer {TAVILY_API_KEY}"}
+        response = requests.post(baseURLs["search"], json=params, headers=headers)
+        if response.status_code != 200:
+            raise HTTPException(status_code=500, detail="Tavily API error")
+        return response.json()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# 🔒 PROTECTED endpoint — requires api_key header (your API_KEY env var)
 # Define endpoint Tavily search
 @app.post("/tavily-search")
 async def tavily_search(request: TavilySearchRequest, api_key: str = Depends(get_api_key)) -> TavilyResponse:
