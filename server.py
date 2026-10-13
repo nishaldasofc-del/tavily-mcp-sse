@@ -56,6 +56,7 @@ class TavilySearchRequest(BaseModel):
     days: int = 3
     time_range: Literal["day", "week", "month", "year", "d", "w", "m", "y"] = "day"
     max_results: int = 10
+    include_answer: bool = False
     include_images: bool = False
     include_image_descriptions: bool = False
     include_raw_content: bool = False
@@ -100,6 +101,7 @@ async def public_search(request: TavilySearchRequest) -> TavilyResponse:
             "days": request.days,
             "time_range": request.time_range,
             "max_results": request.max_results,
+            "include_answer": request.include_answer,
             "include_images": request.include_images,
             "include_image_descriptions": request.include_image_descriptions,
             "include_raw_content": request.include_raw_content,
@@ -141,6 +143,7 @@ async def tavily_search(request: TavilySearchRequest, api_key: str = Depends(get
             "days": request.days,
             "time_range": request.time_range,
             "max_results": request.max_results,
+            "include_answer": request.include_answer,
             "include_images": request.include_images,
             "include_image_descriptions": request.include_image_descriptions,
             "include_raw_content": request.include_raw_content,
